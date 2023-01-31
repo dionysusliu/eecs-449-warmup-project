@@ -19,7 +19,7 @@ node dialogue_state:cai_state{
 
     can extract_entities{
         res = tfm_ner.extract_entity(visitor.question);
-        for ent in res{
+        for ent in res {
             ent_type = ent["entity_value"];
             ent_text = ent["entity_text"];
             if(!(ent_type in visitor.wlk_ctx["entities"])){

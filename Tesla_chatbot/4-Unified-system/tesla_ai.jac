@@ -16,7 +16,7 @@ node cai_state {
             // carry over the historical records
             new_wlk_ctx["entities"] = visitor.wlk_ctx["entities"];
         }
-        visitor.wlk_ctx["entities"] = new_wlk_ctx["entities"];
+        visitor.wlk_ctx= new_wlk_ctx;
     }
     can nlu{}
     can process {
@@ -95,8 +95,24 @@ walker talk {
     root {
         take --> node::dialogue_root;
     }
-    dialogue_state {
-        if (!question) {
+    // dialogue_state {
+    //     if (!question) {
+    //         question = std.input("Question (Ctrl-C to exit)> ");
+    //         here::init_wlk_ctx;
+    //     }
+    //     here::nlu;
+    //     here::process;
+    //     if (visitor.wlk_ctx["respond"]) {
+    //         here::nlg;
+    //         std.out(response);
+    //         question = null;
+    //         take here;
+    //     } else {
+    //         take visitor.wlk_ctx["next_state"] else: take here;
+    //     }
+    // }
+    cai_state { // unified-version
+        if (!question){
             question = std.input("Question (Ctrl-C to exit)> ");
             here::init_wlk_ctx;
         }

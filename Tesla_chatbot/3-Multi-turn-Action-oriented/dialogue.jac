@@ -18,8 +18,8 @@ node dialogue_state{
     can extract_entities{
         res = tfm_ner.extract_entity(visitor.question);
         for ent in res{
-            ent_type = ent["entity_value"]
-            ent_text = ent["entity_text"]
+            ent_type = ent["entity_value"];
+            ent_text = ent["entity_text"];
             if(!(ent_type in visitor.wlk_ctx["entities"])){
                 visitor.wlk_ctx["entities"][ent_type] = [];
             }
@@ -65,8 +65,9 @@ node dialogue_root:dialogue_state{
     can process {
         visitor.wlk_ctx["next_state"] = (-[intent_transition(intent==visitor.wlk_ctx["intent"])]->)[0];
     }
-    can nlg{
-        visitor.response = "Sottry I can't handle that just yet. Anything else I can help you with?";
+    
+    can nlg {
+        visitor.response = "Sorry I can't handle that just yet. Anything else I can help you with?";
     }
 }
 
