@@ -7,7 +7,7 @@ node dialogue_state:cai_state{
     can bi_enc.infer;
     can tfm_ner.extract_entity;
 
-    can classify_intent{ // handle intent classification
+    can classify_intent { // handle intent classification
         intent_labels = -[intent_transition]->.edge.intent;
         visitor.wlk_ctx["intent"] = bi_enc.infer( // "visitor" is the walker visiting this node
             contexts = [visitor.question],
@@ -17,9 +17,9 @@ node dialogue_state:cai_state{
         )[0]["predicted"]["label"]; // essentially these function is "updating context of visitor" with result of bi_encoder model
     }
 
-    can extract_entities{
-        res = tfm_ner.extract_entity(visitor.question);
-        for ent in res {
+    can extract_entities {
+        resp = tfm_ner.extract_entity(visitor.question);
+        for ent in resp {
             ent_type = ent["entity_value"];
             ent_text = ent["entity_text"];
             if(!(ent_type in visitor.wlk_ctx["entities"])){
@@ -27,6 +27,7 @@ node dialogue_state:cai_state{
             }
             visitor.wlk_ctx["entities"][ent_type].l::append(ent_text);
         }
+        std.out("entities extracted");
     }
     can nlu{}
     can nlg { // use nlu result to compose response to user
@@ -43,7 +44,7 @@ node dialogue_root:dialogue_state{
         visitor.wlk_ctx["next_state"] = (-[intent_transition(intent==visitor.wlk_ctx["intent"])]->)[0];
     }
     can nlg{
-        visitor.response = "Sottry I can't handle that just yet. Anything else I can help you with?";
+        visitor.response = "Sorry I can't handle that just yet. Anything else I can help you with?";
     }
 }
 
@@ -127,7 +128,7 @@ edge entity_transition {
     has entities;
 }
 
-graph dialogue_system {
+graph dialogue_system_ {
     has anchor dialogue_root;
     spawn {
         dialogue_root = spawn node::dialogue_root;
@@ -146,14 +147,6 @@ graph dialogue_system {
         td_confirmation +[intent_transition(intent="cancel")]+> td_canceled;
 
         dialogue_root +[intent_transition(intent="order a tesla")]+> how_to_order_state;
-    }
-}
-
-
-node vehicle {
-    has plate_numer;
-    can get_plate_numer{
-        report here.plate_numer;
     }
 }
 
@@ -181,32 +174,36 @@ graph dialogue_system{
 
 walker init {
     root {
-        spawn here ++> graph::dialogue_system;
-        spawn here walker::talk;
+        spawn here ++> graph::dialogue_system_;
+        // spawn here walker::talk;
+        spawn here walker::talk_;
     }
 }
 
-// walker talk {
-//     has question;
-//     can bi_enc.infer;
-//     root {
-//         question = std.input("> ");
-//         take --> node::dialogue_root;
-//     }
-//     dialogue_root {
-//         intent_labels = -[intent_transition]->.edge.intent;
-//         predicted_intent = bi_enc.infer(
-//             contexts = [question],
-//             candidates = intent_labels,
-//             context_type = "text",
-//             candidate_type = "text"
-//         )[0]["predicted"]["label"];
-//         take -[intent_transition(intent==predicted_intent)]-> node::dialogue_state; // notice that intent==question is deterministic
-//     }
-//     dialogue_state {
-//         std.out(here.response);
-//     }
-// }
+walker talk_ {
+    has question;
+    has wlk_ctx = {};
+    has response;
+    root {
+        take --> node::dialogue_root;
+    }
+    dialogue_state {
+        if (!question) {
+            question = std.input("Question (Ctrl-C to exit)> ");
+            here::init_wlk_ctx;
+        }
+        here::nlu;
+        here::process;
+        if (visitor.wlk_ctx["respond"]){
+            here::nlg;
+            std.out(response);
+            question = null;
+            take here;
+        } else {
+            take visitor.wlk_ctx["next_state"] else: take here;
+        }
+    }
+}
 
 walker talk {
     has question, interactive = false;
